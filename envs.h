@@ -13,4 +13,7 @@ typedef struct {
 
 extern ConditionalEnv conditional_envs[];
 
+char** create_modified_envp(char* const envp[]);
+void free_envp(char** envp);
+
 #endif
