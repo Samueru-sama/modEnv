@@ -34,4 +34,12 @@
 #define INJECT_DEPTH_ENABLED 0
 #endif
 
-#endif // MODENV_H
+#ifndef APPLY_TO
+#define APPLY_TO "APPIMAGE"
+#endif
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+#define APPLY_TO_STR TOSTRING(APPLY_TO)
+
+#endif
