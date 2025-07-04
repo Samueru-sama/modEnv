@@ -37,6 +37,7 @@ static int inject_depth = 0;
 
 #if !defined(NO_UNHOOK_DEPTH)
 static int current_depth = 0;
+static int allowed_depth = 0;
 #endif
 
 static void handle_conditional_envs(void) {
@@ -54,13 +55,13 @@ __attribute__((constructor)) void check_rehook_guard(void) {
 
 #if !defined(NO_UNHOOK_DEPTH)
   const char* depth_str = getenv("_UNHOOK_DEPTH");
-  int allowed_depth = 0;
+  allowed_depth = 0;
   if (depth_str) {
     int d = atoi(depth_str);
     if (d >= 0 && d <= 16) allowed_depth = d;
   }
 #else
-  int allowed_depth = 0;
+  allowed_depth = 0;
 #endif
 
 #if !defined(NO_INJECT_DEPTH)
@@ -83,18 +84,12 @@ __attribute__((constructor)) void check_rehook_guard(void) {
     hook_enabled = false;
     return;
   }
-
-  setenv(MODENV_BUILD_ID_ENV, BUILD_ID, 1);
-  char new_depth_str[8];
-  snprintf(new_depth_str, sizeof(new_depth_str), "%d", current_depth + 1);
-  setenv(depth_var, new_depth_str, 1);
 #else
   if (current_id && strcmp(current_id, BUILD_ID) == 0) {
     DEBUGF("%s: modEnv: rehook prevented (BUILD_ID=%s) [no depth check]\n", get_exe_name(), BUILD_ID);
     hook_enabled = false;
     return;
   }
-  setenv(MODENV_BUILD_ID_ENV, BUILD_ID, 1);
 #endif
 
 #if !defined(NO_INJECT_DEPTH)
@@ -104,7 +99,6 @@ __attribute__((constructor)) void check_rehook_guard(void) {
   handle_conditional_envs();
 #endif
 
-  /* Prepare debug variables outside macro args */
   int dbg_current_depth = 0, dbg_allowed_depth = 0;
 #if !defined(NO_UNHOOK_DEPTH)
   dbg_current_depth = current_depth;
@@ -115,10 +109,22 @@ __attribute__((constructor)) void check_rehook_guard(void) {
          get_exe_name(), BUILD_ID, dbg_current_depth, dbg_allowed_depth);
 
 #else
-  /* ANTI_REHOOK == 0: minimal setup */
   DEBUGF("%s: modEnv: hook initialized (BUILD_ID=%s, anti_rehook disabled)\n", get_exe_name(), BUILD_ID);
   handle_conditional_envs();
 #endif
+}
+
+int get_current_depth(void) {
+  return current_depth;
+}
+int get_allowed_depth(void) {
+  return allowed_depth;
+}
+int get_inject_depth(void) {
+  return inject_depth;
+}
+const char* get_build_id(void) {
+  return BUILD_ID;
 }
 
 typedef int (*execv_func)(const char*, char* const[]);
