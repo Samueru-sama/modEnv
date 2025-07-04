@@ -8,7 +8,7 @@ TARGET = modEnv.so
 BUILD_ID = $(shell date +%s)
 DANTI_REHOOK ?= 1
 DEBUG ?= 0
-APPLY_TO ?= "APPIMAGE"
+APPLY_TO ?= ""
 
 all: $(TARGET)
 
