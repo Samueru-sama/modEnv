@@ -8,7 +8,7 @@ TARGET = modEnv.so
 all: $(TARGET)
 
 $(TARGET): $(SRC)
-	$(CC) $(CFLAGS) $(LDFLAGS) -shared -o $@ $^
+	$(CC) -DDEBUG=$(DEBUG) $(CFLAGS) $(LDFLAGS) -shared -o $@ $^
 
 clean:
 	rm -f $(TARGET)
