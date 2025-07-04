@@ -6,9 +6,9 @@
 typedef bool (*ConditionFunc)(void);
 
 typedef struct {
-    const char *env;
-    const char *value;
-    ConditionFunc condition;
+  const char* env;
+  const char* value;
+  ConditionFunc condition;
 } ConditionalEnv;
 
 extern ConditionalEnv conditional_envs[];

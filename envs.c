@@ -1,9 +1,10 @@
 #include "envs.h"
-#include <stdlib.h>
+
 #include <stdbool.h>
+#include <stdlib.h>
 
 bool is_appdir_set(void) {
-    return getenv("APPDIR") != NULL;
+  return getenv("APPDIR") != NULL;
 }
 
 ConditionalEnv conditional_envs[] = {
@@ -34,7 +35,6 @@ ConditionalEnv conditional_envs[] = {
     {"TCL_LIBRARY", NULL, is_appdir_set},
     {"TK_LIBRARY", NULL, is_appdir_set},
     {"XTABLES_LIBDIR", NULL, is_appdir_set},
-    {"APPDIR", NULL, is_appdir_set}, // change it samu if its wrong
-    //{"APPDIR", "/tmp/aHardcodedPath", is_appdir_set}, // just an example, but you could use a function instead of a string, or NULL to unset
+    {"APPDIR", NULL, is_appdir_set},
     {NULL, NULL, NULL}
 };
