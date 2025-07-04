@@ -3,9 +3,9 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-bool is_appdir_set(void) {
-  return getenv("APPDIR") != NULL;
-}
+bool is_appdir_set(void) { return getenv("APPDIR") != NULL; }
+bool is_appimage_set(void) { return getenv("APPIMAGE") != NULL; }
+static bool always(void) { return true; }
 
 ConditionalEnv conditional_envs[] = {
     {"BABL_PATH", NULL, is_appdir_set},
@@ -35,6 +35,6 @@ ConditionalEnv conditional_envs[] = {
     {"TCL_LIBRARY", NULL, is_appdir_set},
     {"TK_LIBRARY", NULL, is_appdir_set},
     {"XTABLES_LIBDIR", NULL, is_appdir_set},
-    {"APPDIR", NULL, is_appdir_set},
-    {NULL, NULL, NULL}
-};
+    {"APPDIR", NULL, always},
+    {"APPIMAGE", NULL, always},
+    {NULL, NULL, NULL}};
