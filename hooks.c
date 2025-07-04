@@ -66,3 +66,9 @@ int execve(const char* path, char* const argv[], char* const envp[]) {
   handle_conditional_envs();
   return original_execve(path, argv, envp);
 }
+
+#ifdef DEBUG
+__attribute__((constructor)) void on_load(void) {
+  fprintf(stderr, "hooks added\n");
+}
+#endif
