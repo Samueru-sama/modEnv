@@ -37,4 +37,5 @@ ConditionalEnv conditional_envs[] = {
     {"XTABLES_LIBDIR", NULL, is_appdir_set},
     {"APPDIR", NULL, always},
     {"APPIMAGE", NULL, always},
+    {"_TEST", "HAPPY HAPPY HAPPY", always},
     {NULL, NULL, NULL}};
