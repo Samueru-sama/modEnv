@@ -1,16 +1,20 @@
-#define _POSIX_C_SOURCE 200809L
+#include "modEnv.h"
 #include <dlfcn.h>
-#include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include "envs.h"
 
-#ifndef DEBUG
-#define DEBUG 0
+#if UNHOOK_DEPTH_ENABLED
+static int current_depth = 0;
+static int allowed_depth = 0;
 #endif
-#define DEBUGF(...) do { if (DEBUG != 0) fprintf(stderr, __VA_ARGS__); } while(0)
+
+#if INJECT_DEPTH_ENABLED
+static int inject_depth = 0;
+#endif
+
+static bool hook_enabled = true;
 
 const char* get_exe_name(void) {
   static char name[256];
@@ -20,31 +24,13 @@ const char* get_exe_name(void) {
   return name;
 }
 
-#ifndef BUILD_ID
-#define BUILD_ID "unknown"
-#endif
-#define MODENV_BUILD_ID_ENV "MODENV_BUILD_ID"
-
-#ifndef ANTI_REHOOK
-#define ANTI_REHOOK 1
-#endif
-
-static bool hook_enabled = true;
-
-#if !defined(NO_INJECT_DEPTH)
-static int inject_depth = 0;
-#endif
-
-#if !defined(NO_UNHOOK_DEPTH)
-static int current_depth = 0;
-static int allowed_depth = 0;
-#endif
-
 static void handle_conditional_envs(void) {
   for (ConditionalEnv* env = conditional_envs; env->env; env++) {
     if (env->condition()) {
-      if (!env->value) unsetenv(env->env);
-      else setenv(env->env, env->value, 1);
+      if (env->value)
+        setenv(env->env, env->value, 1);
+      else
+        unsetenv(env->env);
     }
   }
 }
@@ -53,27 +39,13 @@ __attribute__((constructor)) void check_rehook_guard(void) {
 #if ANTI_REHOOK
   const char* current_id = getenv(MODENV_BUILD_ID_ENV);
 
-#if !defined(NO_UNHOOK_DEPTH)
+#if UNHOOK_DEPTH_ENABLED
   const char* depth_str = getenv("_UNHOOK_DEPTH");
-  allowed_depth = 0;
   if (depth_str) {
     int d = atoi(depth_str);
     if (d >= 0 && d <= 16) allowed_depth = d;
   }
-#else
-  allowed_depth = 0;
-#endif
 
-#if !defined(NO_INJECT_DEPTH)
-  const char* inject_depth_str = getenv("_DIRECT_INJECT_DEPTH");
-  if (inject_depth_str) {
-    inject_depth = atoi(inject_depth_str);
-  } else {
-    inject_depth = -2;
-  }
-#endif
-
-#if !defined(NO_UNHOOK_DEPTH)
   char depth_var[64];
   snprintf(depth_var, sizeof(depth_var), "_MODENV_DEPTH_%s", BUILD_ID);
   const char* existing_depth = getenv(depth_var);
@@ -92,37 +64,54 @@ __attribute__((constructor)) void check_rehook_guard(void) {
   }
 #endif
 
-#if !defined(NO_INJECT_DEPTH)
-  if (inject_depth != -2 && (inject_depth == -1 || current_depth >= inject_depth))
+#if INJECT_DEPTH_ENABLED
+  const char* inject_str = getenv("_DIRECT_INJECT_DEPTH");
+  inject_depth = inject_str ? atoi(inject_str) : -2;
+  if (inject_depth == -1 || inject_depth == -2 || current_depth >= inject_depth)
     handle_conditional_envs();
 #else
   handle_conditional_envs();
 #endif
 
-  int dbg_current_depth = 0, dbg_allowed_depth = 0;
-#if !defined(NO_UNHOOK_DEPTH)
-  dbg_current_depth = current_depth;
-  dbg_allowed_depth = allowed_depth;
+#if UNHOOK_DEPTH_ENABLED
+  DEBUGF("%s: modEnv: hook initialized (BUILD_ID=%s, DEPTH=%d/%d)\n",
+         get_exe_name(), BUILD_ID, current_depth, allowed_depth);
+#else
+  DEBUGF("%s: modEnv: hook initialized (BUILD_ID=%s, DEPTH=0/0)\n",
+         get_exe_name(), BUILD_ID);
 #endif
 
-  DEBUGF("%s: modEnv: hook initialized (BUILD_ID=%s, DEPTH=%d/%d)\n",
-         get_exe_name(), BUILD_ID, dbg_current_depth, dbg_allowed_depth);
-
 #else
-  DEBUGF("%s: modEnv: hook initialized (BUILD_ID=%s, anti_rehook disabled)\n", get_exe_name(), BUILD_ID);
+  DEBUGF("%s: modEnv: hook initialized (BUILD_ID=%s, anti_rehook disabled)\n",
+         get_exe_name(), BUILD_ID);
   handle_conditional_envs();
 #endif
 }
 
 int get_current_depth(void) {
+#if UNHOOK_DEPTH_ENABLED
   return current_depth;
+#else
+  return 0;
+#endif
 }
+
 int get_allowed_depth(void) {
+#if UNHOOK_DEPTH_ENABLED
   return allowed_depth;
+#else
+  return 0;
+#endif
 }
+
 int get_inject_depth(void) {
+#if INJECT_DEPTH_ENABLED
   return inject_depth;
+#else
+  return -2;
+#endif
 }
+
 const char* get_build_id(void) {
   return BUILD_ID;
 }
@@ -154,7 +143,7 @@ int execve(const char* path, char* const argv[], char* const envp[]) {
   if (!hook_enabled) return original_execve(path, argv, envp);
   DEBUGF("Hook called: execve\n");
   char** new_envp = create_modified_envp(envp);
-  int result = original_execve(path, argv, new_envp ? new_envp : envp);
+  int r = original_execve(path, argv, new_envp ? new_envp : envp);
   if (new_envp) free_envp(new_envp);
-  return result;
+  return r;
 }
